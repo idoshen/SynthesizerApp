@@ -13,19 +13,20 @@ import java.util.List;
 import java.util.HashMap;
 
 public class Synthesizer {
-    public static final HashMap<Character, Double> KEY_FREQUENCIES = new HashMap<>();
+    public static final HashMap<Integer, Double> KEY_FREQUENCIES = new HashMap<>();
     public static boolean shouldGenerate;
     public static boolean allKeysReleased;
-    public static List<Character> pressedKeys = new ArrayList<>();
-    public static Character currentPressedKey;
-    private final Oscillator[] oscillators = new Oscillator[3];
+    public static List<Integer> pressedKeys = new ArrayList<>();
+    public static int currentPressedKey;
+    private static final Oscillator[] oscillators = new Oscillator[3];
     public static int oscillatorCount = 0;
     private final ADSR ADSRPanel = new ADSR(this);
     public final Saturation SaturationPanel = new Saturation(this);
-    public final Reverb ReverbPanel = new Reverb(this);
+//    public final Reverb ReverbPanel = new Reverb(this);
     public final Delay DelayPanel = new Delay(this);
-//    public final Arpeggiator ArpeggiatorPanel = new Arpeggiator(this);
     public final BeatTimeManagerThread BTMThread = new BeatTimeManagerThread(this);
+    public static boolean isNewBeat = false;
+    public static boolean isNewBar = false;
     private final WaveViewer waveViewer = new WaveViewer(oscillators , SaturationPanel);
     private final ADSRWaveViewer adsrWaveViewer = new ADSRWaveViewer(ADSRPanel);
 
@@ -56,43 +57,47 @@ public class Synthesizer {
     private final KeyAdapter keyAdapter = new KeyAdapter() {
         @Override
         public void keyPressed(KeyEvent e) {
-            System.out.println("PRESSED");
+//            System.out.println("PRESSED");
             if (allKeysReleased) {
                 ADSRPanel.resetFX();
             }
-            if (!KEY_FREQUENCIES.containsKey(e.getKeyChar())) {
+            if (!KEY_FREQUENCIES.containsKey(e.getKeyCode())) {
                 return;
-            } else if (!pressedKeys.contains(e.getKeyChar())) {
-                pressedKeys.add(e.getKeyChar());
+            } else if (!pressedKeys.contains(e.getKeyCode())) {
+                pressedKeys.add(e.getKeyCode());
+//                System.out.println(e.getKeyCode());
                 updateLastPressedKey();
-//                ArpeggiatorPanel.creatNewArpeggioSequence();
+                Arpeggiator.creatNewArpeggioSequence();
                 allKeysReleased = false;
+            } else { // if key is already pressed
+                return;
             }
             if (!pressedKeys.isEmpty()) {
                 double frequency = KEY_FREQUENCIES.get(currentPressedKey);
-                for (Oscillator oscillator : oscillators) {
-                    oscillator.setKeyFrequency(frequency);
-                }
+//                frequency = Utils.Math.getKeyFrequency(Arpeggiator.yieldNextKeyNum());
+                setOscillatorsFreq(frequency);
                 if (!audioThread.isRunning()) {
                     shouldGenerate = true;
                     audioThread.triggerPlayback();
                 }
             }
         }
+//        {65, 87, 83, 69, 68, 70, 84, 71, 89, 72, 85, 74, 75, 79, 76, 80, 59}
 
         @Override
         public void keyReleased(KeyEvent e) {
-            System.out.println("RELEASED");
-            pressedKeys.remove(Character.valueOf(e.getKeyChar()));
+//            System.out.println("RELEASED");
+            if (pressedKeys.contains(e.getKeyCode())){
+                pressedKeys.remove((Integer) e.getKeyCode());
+            }
+            Arpeggiator.resetFX();
             updateLastPressedKey();
 
             if (pressedKeys.isEmpty()){
                 allKeysReleased = true;
 //                shouldGenerate = false;
             } else {
-                for (Oscillator oscillator : oscillators) {
-                    oscillator.setKeyFrequency(KEY_FREQUENCIES.get(currentPressedKey));
-                }
+                setOscillatorsFreq(KEY_FREQUENCIES.get(currentPressedKey));
             }
         }
     };
@@ -101,10 +106,17 @@ public class Synthesizer {
     {
         final int STARTING_KEY = 40;
         final int KEY_FREQUENCY_INCREMENT = 1;
-        final char[] KEYS = "awsedftgyhujkolp;".toCharArray();
+//        final char[] KEYS = "awsedftgyhujkolp;".toCharArray();
+        final int[] KEYS = {65, 87, 83, 69, 68, 70, 84, 71, 89, 72, 85, 74, 75, 79, 76, 80, 59};
 
         for (int i = STARTING_KEY, key = 0; i < KEYS.length * KEY_FREQUENCY_INCREMENT + STARTING_KEY; i += KEY_FREQUENCY_INCREMENT, ++key) {
             KEY_FREQUENCIES.put(KEYS[key], Utils.Math.getKeyFrequency(i));
+        }
+    }
+
+    public static void setOscillatorsFreq(double frequency){
+        for (Oscillator oscillator : oscillators) {
+            oscillator.setKeyFrequency(frequency);
         }
     }
 
@@ -148,7 +160,7 @@ public class Synthesizer {
         if (!pressedKeys.isEmpty()) {
             currentPressedKey = pressedKeys.get(pressedKeys.size() - 1);
         } else {
-            currentPressedKey = null;
+            currentPressedKey = 0;
         }
     }
 

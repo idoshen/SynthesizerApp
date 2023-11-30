@@ -4,18 +4,15 @@ import com.idoshen.synth.SynthControlContainer;
 import com.idoshen.synth.Synthesizer;
 import com.idoshen.synth.utils.Utils;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class Arpeggiator extends SynthControlContainer {
 
-    private int[] arpeggioSequence;
-    private int arpeggioIndex = 0;
+    private static int[] arpeggioSequence = {0, 0, 0}; // TODO: change this bad default!!!
+    private static int arpeggioIndex = 0;
     public Arpeggiator(Synthesizer synthesizer){
         super(synthesizer);
     }
 
-    public void creatNewArpeggioSequence(){
+    public static void creatNewArpeggioSequence(){
         arpeggioSequence = new int[3];
         arpeggioIndex = 0;
         int currentKeyNumber = Utils.Math.frequencyToKeyNumber(Synthesizer.KEY_FREQUENCIES.get(Synthesizer.currentPressedKey));
@@ -24,13 +21,15 @@ public class Arpeggiator extends SynthControlContainer {
         arpeggioSequence[2] = currentKeyNumber + 5;
     }
 
-    public int yieldNextKeyNum(){
-        int nextKeyNum = arpeggioSequence[arpeggioIndex % arpeggioSequence.length];
-        arpeggioIndex++;
-        return nextKeyNum;
+    public static int yieldNextKeyNum(){
+        return arpeggioSequence[arpeggioIndex % arpeggioSequence.length];
     }
 
-    public void resetFX(){
+    public static void incrementIndex(){
+        arpeggioIndex++;
+    }
+
+    public static void resetFX(){
         arpeggioSequence = new int[3];
         arpeggioIndex = 0;
     }

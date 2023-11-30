@@ -2,29 +2,27 @@ package com.idoshen.synth.utils;
 
 import com.idoshen.synth.SynthControlContainer;
 import com.idoshen.synth.Synthesizer;
-import org.lwjgl.system.linux.Stat;
+import com.idoshen.synth.audioFX.Arpeggiator;
 
 import javax.swing.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 public class BeatTimeManager extends SynthControlContainer {
 
     private long startTime;  // Time when the time manager is started
     private int currentBeat = 1;  // Current beat count
     private int currentBar = 1;  // Current bar count
-    private final int MaxBPMValue = 3000; //  - Max 300 BPM
+    private final int MaxBPMValue = 10000; //  - Max 1000 BPM
     private final int MaxBPBValue = 32; // - Max 32 BPB
 
-    private final int MinBPMValue = 1; //  - Min 300 BPM
-    private final int MinBPBValue = 1; // - Min 32 BPB
+    private final int MinBPMValue = 1; //  - Min 0.1 BPM
+    private final int MinBPBValue = 1; // - Min 1 BPB
 
-    private RefWrapper<Integer> beatsPerMinute = new RefWrapper<>(1000); // Beats per minute (BPM)
-    private RefWrapper<Integer> beatsPerBar = new RefWrapper<>(4); // Beats per bar
-    private RefWrapper<Integer> State = new RefWrapper<>(0); // Beats per bar
+    private final RefWrapper<Integer> beatsPerMinute = new RefWrapper<>(1000); // Beats per minute (BPM)
+    private final RefWrapper<Integer> beatsPerBar = new RefWrapper<>(4); // Beats per bar
+    private final RefWrapper<Integer> State = new RefWrapper<>(0); // Beats per bar
 
-    private JLabel currentBarLabel = new JLabel("Current Bar: 1");
-    private JLabel currentBeatLabel = new JLabel("Current Beat: 1");
+    private final JLabel currentBarLabel = new JLabel("Current Bar: 1");
+    private final JLabel currentBeatLabel = new JLabel("Current Beat: 1");
     public boolean running = false;
 
     public BeatTimeManager(Synthesizer synthesizer) {
@@ -163,6 +161,20 @@ public class BeatTimeManager extends SynthControlContainer {
         double elapsedTime = getElapsedTime();
         double beatsPerSecond = beatsPerMinute / 60.0;
         double totalBeats = elapsedTime * beatsPerSecond;
+
+        if (currentBeat == (int) (totalBeats % beatsPerBar) + 1){
+            Synthesizer.isNewBeat = false;
+        } else {
+            Synthesizer.isNewBeat = true;
+            Arpeggiator.incrementIndex();
+            Synthesizer.setOscillatorsFreq(Utils.Math.getKeyFrequency(Arpeggiator.yieldNextKeyNum()));
+        }
+
+        if (currentBar == (int) (totalBeats / beatsPerBar) + 1){
+            Synthesizer.isNewBar = false;
+        } else {
+            Synthesizer.isNewBar = true;
+        }
 
         currentBeat = (int) (totalBeats % beatsPerBar) + 1;
         currentBar = (int) (totalBeats / beatsPerBar) + 1;
