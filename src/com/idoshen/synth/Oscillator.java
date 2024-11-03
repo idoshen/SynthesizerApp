@@ -110,6 +110,8 @@ public class Oscillator extends SynthControlContainer {
         applyToneOffset();
     }
 
+    public double getKeyFrequency() { return keyFrequency; }
+
     public double[] getSampleWaveform(int numSamples) { // only for WaveViewer.
         double[] samples = new double[numSamples];
         double frequency = 1.0 / (numSamples / (double)Synthesizer.AudioInfo.SAMPLE_RATE) * 3.0;
@@ -122,7 +124,7 @@ public class Oscillator extends SynthControlContainer {
         return samples;
     }
 
-    private double getToneOffset() { return toneOffset.val; }
+    public double getToneOffset() { return toneOffset.val; }
 
     private int getSemitonesOffset() { return SemitoneOffset.val; }
 

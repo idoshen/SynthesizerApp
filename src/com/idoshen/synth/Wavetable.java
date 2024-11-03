@@ -2,12 +2,10 @@ package com.idoshen.synth;
 
 import com.idoshen.synth.utils.Utils;
 
-import java.security.SecureRandom;
-
 enum Wavetable {
     Sine, Square, Sawtooth, Triangle;
 
-    static final int SIZE = 8192;
+    static final int SIZE = 44100;
 
     private final float[] samples = new float[SIZE];
 

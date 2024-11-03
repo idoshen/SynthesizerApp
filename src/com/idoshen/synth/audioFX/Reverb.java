@@ -7,11 +7,11 @@ import com.idoshen.synth.utils.Utils;
 
 import javax.swing.*;
 
-public class Reverb extends SynthControlContainer {
+public class Reverb extends SynthControlContainer implements AudioEffect{
     private static final int REVERB_BUFFER_SIZE = 8192;
     private static final float REVERB_DECAY = 0.5f;
     private RefWrapper<Integer> reverb_decay_level = new RefWrapper<>(0);
-    private float[] reverbBuffer = new float[REVERB_BUFFER_SIZE];
+    private double[] reverbBuffer = new double[REVERB_BUFFER_SIZE];
     private int reverbBufferIndex = 0;
 
     public Reverb(Synthesizer synthesizer){
@@ -34,9 +34,10 @@ public class Reverb extends SynthControlContainer {
         add(reverbParameter);
     }
 
-    public float applyReverb(float sample) {
-        float reverbSample = reverbBuffer[reverbBufferIndex];
-        float processedSample = sample + (reverb_decay_level.val / 1000.0f) * reverbSample;
+    @Override
+    public double applyEffect(double sample) {
+        double reverbSample = reverbBuffer[reverbBufferIndex];
+        double processedSample = sample + (reverb_decay_level.val / 1000.0f) * reverbSample;
         System.out.println(processedSample);
         reverbBuffer[reverbBufferIndex] = processedSample;
         reverbBufferIndex = (reverbBufferIndex + 1) % REVERB_BUFFER_SIZE;
@@ -45,15 +46,15 @@ public class Reverb extends SynthControlContainer {
     }
 
     public void resetFX() {
-        reverbBuffer = new float[REVERB_BUFFER_SIZE];
+        reverbBuffer = new double[REVERB_BUFFER_SIZE];
     }
 
     private void normalizeReverbBuffer() {
-        float maxAmplitude = 0;
+        double maxAmplitude = 0;
 
         // Find the maximum absolute amplitude in the buffer
-        for (float value : reverbBuffer) {
-            float absValue = Math.abs(value);
+        for (double value : reverbBuffer) {
+            double absValue = Math.abs(value);
             if (absValue > maxAmplitude) {
                 maxAmplitude = absValue;
             }
@@ -61,13 +62,18 @@ public class Reverb extends SynthControlContainer {
 
         // Scale the buffer if the maximum amplitude exceeds 1.0
         if (maxAmplitude > 1.0f) {
-            float scaleFactor = 1.0f / maxAmplitude;
+            double scaleFactor = 1.0f / maxAmplitude;
 
             // Apply scaling to each element in the buffer
             for (int i = 0; i < REVERB_BUFFER_SIZE; i++) {
                 reverbBuffer[i] *= scaleFactor;
             }
         }
+    }
+
+    @Override
+    public String getName() {
+        return "Reverb";
     }
 
     public double getReverbLevel(){ return (1.0d - reverb_decay_level.val / 1000.0d); }

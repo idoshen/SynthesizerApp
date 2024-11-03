@@ -6,7 +6,7 @@ import com.idoshen.synth.utils.*;
 import com.idoshen.synth.utils.Utils;
 
 import javax.swing.*;
-public class ADSR extends SynthControlContainer {
+public class ADSR extends SynthControlContainer implements AudioEffect {
 
     private static double time = 0.0;
 
@@ -27,7 +27,6 @@ public class ADSR extends SynthControlContainer {
     }
 
     private boolean effectFinished = false;
-
 
     private final int MaxTimeValue = 3000;
 
@@ -100,7 +99,8 @@ public class ADSR extends SynthControlContainer {
         add(releaseParameter);
     }
 
-    public float generateADSR() {
+    @Override
+    public double applyEffect(double sample) {
         double envelope = 0.0;
 
         double attackTime = getAttackTimeValue();
@@ -135,7 +135,12 @@ public class ADSR extends SynthControlContainer {
 //            effectFinished = true;
         }
 
-        return (float) envelope;
+        return envelope * sample;
+    }
+
+    @Override
+    public String getName() {
+        return "ADSR";
     }
 
     public double getAttackTimeValue() { return AttackTimeValue.val / 1000.0; }

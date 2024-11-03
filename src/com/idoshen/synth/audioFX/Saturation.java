@@ -7,14 +7,15 @@ import com.idoshen.synth.utils.Utils;
 
 import javax.swing.*;
 
-public class Saturation extends SynthControlContainer {
+public class Saturation extends SynthControlContainer implements AudioEffect{
 
     private RefWrapper<Integer> saturation_level = new RefWrapper<>(0);
 
     public Saturation(Synthesizer synthesizer) {
         super(synthesizer);
         setBorder(Utils.WindowDesign.LINE_BORDER);
-        setBounds(157, 420, 147, 100);
+//        setBounds(157, 420, 147, 100);
+        setBounds(157, 525, 147, 100);
         setSize(147, 100);
         setLayout(null);
 
@@ -31,12 +32,18 @@ public class Saturation extends SynthControlContainer {
         add(saturationParameter);
     }
 
-    public double saturate(double sample){
+    @Override
+    public double applyEffect(double sample){ // TODO: Make not volume dependent
 
         if (Math.abs(sample) < getSatrurationLevel()){
             return sample / getSatrurationLevel();
         }
         return Math.signum(sample);
+    }
+
+    @Override
+    public String getName() {
+        return "Saturation";
     }
 
     public double getSatrurationLevel() { return (1.0d - saturation_level.val / 1000.0d); }

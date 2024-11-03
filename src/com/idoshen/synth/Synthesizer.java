@@ -4,10 +4,12 @@ import com.idoshen.synth.utils.Utils;
 import com.idoshen.synth.audioFX.*;
 
 import javax.swing.*;
+
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
@@ -16,89 +18,104 @@ public class Synthesizer {
     public static final HashMap<Integer, Double> KEY_FREQUENCIES = new HashMap<>();
     public static boolean shouldGenerate;
     public static boolean allKeysReleased;
+    public static boolean isKeyPressed;
     public static List<Integer> pressedKeys = new ArrayList<>();
     public static int currentPressedKey;
     private static final Oscillator[] oscillators = new Oscillator[3];
+    private final LowFrequencyOsillator LFO = new LowFrequencyOsillator(this);
     public static int oscillatorCount = 0;
-    private final ADSR ADSRPanel = new ADSR(this);
+    public final ADSR ADSRPanel = new ADSR(this);
     public final Saturation SaturationPanel = new Saturation(this);
 //    public final Reverb ReverbPanel = new Reverb(this);
     public final Delay DelayPanel = new Delay(this);
+    public final Noise NoisePanel = new Noise(this);
+    public final EQ EQPanel = new EQ(this);
+    private final FXChainManager FXChainManager = new FXChainManager(this);
     public final BeatTimeManagerThread BTMThread = new BeatTimeManagerThread(this);
     public static boolean isNewBeat = false;
     public static boolean isNewBar = false;
-    private final WaveViewer waveViewer = new WaveViewer(oscillators , SaturationPanel);
+    private final WaveViewer waveViewer = new WaveViewer(oscillators, SaturationPanel); // TODO: remove the dependency on saturation
     private final ADSRWaveViewer adsrWaveViewer = new ADSRWaveViewer(ADSRPanel);
-
-    private final JFrame frame = new JFrame("Synthesizer");
+    public short[] audioBuffer;
+    public double currentFrequency;
 
     private final AudioThread audioThread = new AudioThread(() -> {
         if (!shouldGenerate) {
             return null;
         }
-        short[] s = new short[AudioThread.BUFFER_SIZE];
+        audioBuffer = new short[AudioThread.BUFFER_SIZE];
+        if (LFO.on) {
+            double lfoSample = LFO.nextSample(); // TODO: better LFO implementation
+            setOscillatorsFreq(currentFrequency * (1 + lfoSample));
+        }
+
         for (int i = 0; i < AudioThread.BUFFER_SIZE; i++) {
             double sample = 0;
             for (Oscillator oscillator : oscillators) {
-                if (oscillator.on){
+                if (oscillator.on) {
                     sample += oscillator.nextSample() / oscillatorCount; // computes the mean amplitude.
                 }
             }
-            sample *= ADSRPanel.generateADSR(); // ADSR - V
-            sample = SaturationPanel.saturate(sample); // Saturation - V
-            sample = DelayPanel.process((float)sample); // Delay - VX
-//            sample = ReverbPanel.applyReverb((float) sample); // Reverb - X
 
-            s[i] = (short) (Short.MAX_VALUE * sample);
+            sample = FXChainManager.process(sample);
+
+            audioBuffer[i] = (short) (Short.MAX_VALUE * sample); // Convert to short and store in the buffer
         }
-        return s;
+
+        return audioBuffer;
     });
 
     private final KeyAdapter keyAdapter = new KeyAdapter() {
         @Override
         public void keyPressed(KeyEvent e) {
-//            System.out.println("PRESSED");
+//            System.out.println("PRESSED " + e.getKeyCode());
             if (allKeysReleased) {
                 ADSRPanel.resetFX();
             }
             if (!KEY_FREQUENCIES.containsKey(e.getKeyCode())) {
                 return;
             } else if (!pressedKeys.contains(e.getKeyCode())) {
+                isKeyPressed = true;
                 pressedKeys.add(e.getKeyCode());
 //                System.out.println(e.getKeyCode());
                 updateLastPressedKey();
-                Arpeggiator.creatNewArpeggioSequence();
+//                Arpeggiator.creatNewArpeggioSequence();
                 allKeysReleased = false;
             } else { // if key is already pressed
                 return;
             }
             if (!pressedKeys.isEmpty()) {
-                double frequency = KEY_FREQUENCIES.get(currentPressedKey);
+                currentFrequency = KEY_FREQUENCIES.get(currentPressedKey);
 //                frequency = Utils.Math.getKeyFrequency(Arpeggiator.yieldNextKeyNum());
-                setOscillatorsFreq(frequency);
+                setOscillatorsFreq(currentFrequency);
                 if (!audioThread.isRunning()) {
                     shouldGenerate = true;
                     audioThread.triggerPlayback();
                 }
             }
+
+//            System.out.println(pressedKeys); // Debug print
+//            System.out.println(pressedKeys.isEmpty()); // Debug print
         }
-//        {65, 87, 83, 69, 68, 70, 84, 71, 89, 72, 85, 74, 75, 79, 76, 80, 59}
 
         @Override
         public void keyReleased(KeyEvent e) {
-//            System.out.println("RELEASED");
+//            System.out.println("RELEASED " + e.getKeyCode());
+            LFO.reset();
             if (pressedKeys.contains(e.getKeyCode())){
                 pressedKeys.remove((Integer) e.getKeyCode());
             }
-            Arpeggiator.resetFX();
             updateLastPressedKey();
 
             if (pressedKeys.isEmpty()){
                 allKeysReleased = true;
-//                shouldGenerate = false;
+                isKeyPressed = false;
             } else {
                 setOscillatorsFreq(KEY_FREQUENCIES.get(currentPressedKey));
             }
+
+//            System.out.println(pressedKeys); // Debug print
+//            System.out.println(pressedKeys.isEmpty()); // Debug print
         }
     };
 
@@ -107,7 +124,7 @@ public class Synthesizer {
         final int STARTING_KEY = 40;
         final int KEY_FREQUENCY_INCREMENT = 1;
 //        final char[] KEYS = "awsedftgyhujkolp;".toCharArray();
-        final int[] KEYS = {65, 87, 83, 69, 68, 70, 84, 71, 89, 72, 85, 74, 75, 79, 76, 80, 59};
+        final int[] KEYS = {65, 87, 83, 69, 68, 70, 84, 71, 89, 72, 85, 74, 75, 79, 76, 80, 59, 222};
 
         for (int i = STARTING_KEY, key = 0; i < KEYS.length * KEY_FREQUENCY_INCREMENT + STARTING_KEY; i += KEY_FREQUENCY_INCREMENT, ++key) {
             KEY_FREQUENCIES.put(KEYS[key], Utils.Math.getKeyFrequency(i));
@@ -122,6 +139,8 @@ public class Synthesizer {
 
     Synthesizer()
     {
+        JFrame frame = new JFrame("Synthesizer");
+
         int y = 0;
         for (int i = 0; i < oscillators.length; i++) {
             oscillators[i] = new Oscillator(this);
@@ -134,10 +153,14 @@ public class Synthesizer {
         frame.add(adsrWaveViewer);
         frame.add(ADSRPanel);
         frame.add(SaturationPanel);
-        //frame.add(ReverbPanel);
         frame.add(DelayPanel);
+//        frame.add(NoisePanel);
+        frame.add(EQPanel);
+        frame.add(FXChainManager);
+        frame.add(LFO);
         frame.add(BTMThread.beatTimeManager);
         frame.addKeyListener(keyAdapter);
+
         frame.addWindowListener(new WindowAdapter()
         {
             @Override
@@ -147,9 +170,10 @@ public class Synthesizer {
                 BTMThread.close();
             }
         });
-        // in order to kill all threads on close
+
+        // To kill all threads on close
         frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-        frame.setSize(640,625);
+        frame.setSize(640,775);
         frame.setResizable(true);
         frame.setLayout(null);
         frame.setLocationRelativeTo(null);
@@ -167,6 +191,7 @@ public class Synthesizer {
     public KeyAdapter getKeyAdapter() { return keyAdapter; }
     public void updateWaveViewer() { waveViewer.repaint(); }
     public void updateADSRWaveViewer() { adsrWaveViewer.repaint(); }
+
     public static class AudioInfo {
         public static  final  int SAMPLE_RATE = 44100;
     }

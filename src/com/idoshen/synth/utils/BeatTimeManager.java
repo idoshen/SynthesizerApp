@@ -67,48 +67,27 @@ public class BeatTimeManager extends SynthControlContainer {
         currentBeatLabel.setBounds(180, 30, 100, 25);
         add(currentBeatLabel);
 
-        JLabel StateParameter = new JLabel(" OFF");
-        StateParameter.setBounds(170,70, 35,20);
-        StateParameter.setBorder(Utils.WindowDesign.LINE_BORDER);
-        Utils.ParameterHandling.addParametersMouseListeners(StateParameter, this, 0, 1, 1, State, () -> {
-            if (State.val == 0){
-                resetParameters();
-                updateLabelParameters();
-                running = false;
-                StateParameter.setText(" OFF");
-            } else  {
-                resetParameters();
-                running = true;
-                StateParameter.setText(" ON");
-            }
+        JButton BTMStartButton = new JButton("Start");
+        BTMStartButton.setFocusable(false);
+        BTMStartButton.setLocation(150,70);
+        BTMStartButton.setSize(70,20);
+        BTMStartButton.addActionListener(e -> {
+            resetParameters();
+            running = true;
         });
-        add(StateParameter);
 
-//        JButton BTMStartButton = new JButton("Start");
-//        BTMStartButton.setLocation(150,70);
-//        BTMStartButton.setSize(70,20);
-//        BTMStartButton.addActionListener(new ActionListener() {
-//            @Override
-//            public void actionPerformed(ActionEvent e) {
-//                resetParameters();
-//                running = true;
-//            }
-//        });
-//
-//        JButton BTMStopButton = new JButton("Stop");
-//        BTMStopButton.setLocation(220,70);
-//        BTMStopButton.setSize(70, 20);
-//        BTMStopButton.addActionListener(new ActionListener() {
-//            @Override
-//            public void actionPerformed(ActionEvent e) {
-//                resetParameters();
-//                updateLabelParameters();
-//                running = false;
-//            }
-//        });
-//
-//        add(BTMStartButton);
-//        add(BTMStopButton);
+        JButton BTMStopButton = new JButton("Stop");
+        BTMStopButton.setFocusable(false);
+        BTMStopButton.setLocation(220,70);
+        BTMStopButton.setSize(70, 20);
+        BTMStopButton.addActionListener(e -> {
+            resetParameters();
+            updateLabelParameters();
+            running = false;
+        });
+
+        add(BTMStartButton);
+        add(BTMStopButton);
     }
 
     private int getStateParameter() {

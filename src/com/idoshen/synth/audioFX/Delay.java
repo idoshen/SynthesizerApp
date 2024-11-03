@@ -7,10 +7,10 @@ import com.idoshen.synth.utils.Utils;
 
 import javax.swing.*;
 
-public class Delay extends SynthControlContainer {
+public class Delay extends SynthControlContainer implements AudioEffect{
     public final int MAX_MS_DELAY = 1000;
     public final int MAX_DECAY = 1000;
-    private float[] delayLine;
+    private double[] delayLine;
     private int delayLineLength = 0;
     private int currentIndex;
 
@@ -20,8 +20,8 @@ public class Delay extends SynthControlContainer {
     public Delay(Synthesizer synthesizer) {
         super(synthesizer);
         setBorder(Utils.WindowDesign.LINE_BORDER);
-        setBounds(5, 420, 147, 100);
-        setSize(147, 100);
+//        setBounds(5, 420, 147, 100);
+        setBounds(5, 525, 147, 100);
         setLayout(null);
 
         JLabel DelayHeader = new JLabel("Delay:");
@@ -53,25 +53,39 @@ public class Delay extends SynthControlContainer {
 
     }
 
-    public float process(float inputSample) {
-        if (Math.abs(inputSample) < 0.001){
-            inputSample = 0f;
+    @Override
+    public double applyEffect(double inputSample) {
+        float floatInputSample = (float) inputSample;
+        float Epsilon = 1e-4f;
+
+        // If the input sample is very close to zero, set it to zero
+        if (Math.abs(inputSample) < Epsilon){
+            floatInputSample = 0f;
         }
+
+        // If the delay line is empty, return the input sample
         if (delayLineLength == 0){
-            return inputSample;
+            return floatInputSample;
         }
 //        System.out.println(delayLine[currentIndex]);
-        // Output is the current input plus the delayed sample
 
-//        float mixFactor = 0.9f; // You can adjust this value to control the mix
-//        float outputSample = (1 - mixFactor) * inputSample + mixFactor * getDelayedSample(); //MAYBE FOR REVERB!!!
+        //TODO: FIND THE CORRECT FORMULA.
+//        float mixFactor = 0.7f; // You can adjust this value to control the mix
+//        float outputSample = mixFactor * floatInputSample +  (1 - mixFactor) * getDelayedSample(); // MAYBE FOR REVERB!!!
+        double outputSample =  floatInputSample + getDelayedSample();
+//        outputSample =  Math.max(-1.0f, Math.min(1.0f, outputSample)); // Not good, audio saturation occur.
 
-        float outputSample = inputSample / 2 + getDelayedSample() / 2; //TODO: FIND THE CORRECT FORMULA.
 
         // Store the current input in the delay line
         delayLine[currentIndex] = outputSample;
 
-//        return Math.max(-1, Math.min(1, outputSample));
+        // Check for clipping
+        if (Math.abs(outputSample) > 1f){
+            delayLine = normalize(delayLine); // Normalize the delay line
+        }
+
+        outputSample = delayLine[currentIndex];
+
         return outputSample;
     }
 
@@ -80,12 +94,18 @@ public class Delay extends SynthControlContainer {
         currentIndex = (currentIndex + 1) % delayLineLength;
     }
 
-    private float getDelayedSample() {
+    private double getDelayedSample() {
         delayLine[currentIndex] *= (Decay_factor.val / 1000.0f);
+
+        // Check for clipping
         if (Math.abs(delayLine[currentIndex]) < 1e-4){
             delayLine[currentIndex] = 0f;
         }
+        if (Math.abs(delayLine[currentIndex]) > 1){
+            delayLine[currentIndex] = 1f;
+        }
         incrementIndex();
+
         return delayLine[currentIndex];
     }
 
@@ -94,9 +114,37 @@ public class Delay extends SynthControlContainer {
         delayLineLength = (delayMilliseconds * Synthesizer.AudioInfo.SAMPLE_RATE) / 1000;
 
         // Reset the delay line and index
-        delayLine = new float[delayLineLength];
+        delayLine = new double[delayLineLength];
         currentIndex = 0;
     }
 
+    // Normalizes an array to the range [-1, 1]
+    public static double[] normalize(double[] samples) {
+        // Find the max absolute value in the array
+        double max = 0.0f;
+        for (double sample : samples) {
+            if (Math.abs(sample) > max) {
+                max = Math.abs(sample);
+            }
+        }
+
+        // Avoid division by zero in case of all-zero input
+        if (max == 0.0f) {
+            return samples;
+        }
+
+        // Normalize all samples to [-1, 1] range
+        double[] normalizedSamples = new double[samples.length];
+        for (int i = 0; i < samples.length; i++) {
+            normalizedSamples[i] = samples[i] / max;
+        }
+
+        return normalizedSamples;
+    }
+
+    @Override
+    public String getName() {
+        return "Delay";
+    }
 }
 

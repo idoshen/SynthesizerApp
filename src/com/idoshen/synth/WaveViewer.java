@@ -30,7 +30,7 @@ public class WaveViewer extends JPanel {
             if (oscillator.on) {
                 double[] samples = oscillator.getSampleWaveform(numSamples);
                 for (int i = 0; i < samples.length; ++i) {
-                    mixedSamples[i] += saturation.saturate(samples[i]) / Synthesizer.oscillatorCount;
+                    mixedSamples[i] += saturation.applyEffect(samples[i]) / Synthesizer.oscillatorCount;
                 }
             }
         }
