@@ -2,7 +2,7 @@ package com.idoshen.synth;
 
 import com.idoshen.synth.utils.Utils;
 
-enum Wavetable {
+public enum Wavetable {
     Sine, Square, Sawtooth, Triangle;
 
     static final int SIZE = 44100;

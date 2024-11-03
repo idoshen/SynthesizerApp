@@ -30,6 +30,8 @@ public class Synthesizer {
     public final Delay DelayPanel = new Delay(this);
     public final Noise NoisePanel = new Noise(this);
     public final EQ EQPanel = new EQ(this);
+    public final Tremolo TremoloPanel = new Tremolo(this);
+    public final Vibrato VibratoPanel = new Vibrato(this);
     private final FXChainManager FXChainManager = new FXChainManager(this);
     public final BeatTimeManagerThread BTMThread = new BeatTimeManagerThread(this);
     public static boolean isNewBeat = false;
@@ -44,10 +46,11 @@ public class Synthesizer {
             return null;
         }
         audioBuffer = new short[AudioThread.BUFFER_SIZE];
-        if (LFO.on) {
-            double lfoSample = LFO.nextSample(); // TODO: better LFO implementation
-            setOscillatorsFreq(currentFrequency * (1 + lfoSample));
-        }
+
+        VibratoPanel.update(); // TODO: two key pressed at the same time bug
+        TremoloPanel.update();
+
+        setOscillatorsFreq(VibratoPanel.applyEffect(currentFrequency));
 
         for (int i = 0; i < AudioThread.BUFFER_SIZE; i++) {
             double sample = 0;
@@ -58,6 +61,7 @@ public class Synthesizer {
             }
 
             sample = FXChainManager.process(sample);
+            sample = TremoloPanel.applyEffect(sample);
 
             audioBuffer[i] = (short) (Short.MAX_VALUE * sample); // Convert to short and store in the buffer
         }
@@ -155,10 +159,12 @@ public class Synthesizer {
         frame.add(SaturationPanel);
         frame.add(DelayPanel);
 //        frame.add(NoisePanel);
-        frame.add(EQPanel);
+//        frame.add(EQPanel);
         frame.add(FXChainManager);
         frame.add(LFO);
-        frame.add(BTMThread.beatTimeManager);
+//        frame.add(BTMThread.beatTimeManager);
+        frame.add(TremoloPanel);
+        frame.add(VibratoPanel);
         frame.addKeyListener(keyAdapter);
 
         frame.addWindowListener(new WindowAdapter()

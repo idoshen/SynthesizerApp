@@ -1,21 +1,22 @@
-package com.idoshen.synth;
+package com.idoshen.synth.audioFX;
 
+import com.idoshen.synth.LowFrequencyOsillator;
+import com.idoshen.synth.SynthControlContainer;
+import com.idoshen.synth.Synthesizer;
+import com.idoshen.synth.Wavetable;
 import com.idoshen.synth.utils.Utils;
-import com.idoshen.synth.utils.RefWrapper;
 
 import javax.swing.*;
 import java.awt.event.ItemEvent;
 
-public class LowFrequencyOsillator extends SynthControlContainer{
+public class Vibrato extends SynthControlContainer implements AudioEffect {
+    public LowFrequencyOsillator lfo;
+    public double lfoSample;
 
-    public Wavetable wavetable = Wavetable.Sine;
-    public RefWrapper<Integer> frequency = new RefWrapper<>(0);
-    public RefWrapper<Integer> depth = new RefWrapper<>(0);
-    private int wavetableStepSize;
-    private int wavetableIndex;
-
-    public LowFrequencyOsillator(Synthesizer synthesizer) {
+    public Vibrato(Synthesizer synthesizer) {
         super(synthesizer);
+        lfo = new LowFrequencyOsillator(synthesizer);
+
         JComboBox<Wavetable> comboBox = new JComboBox<>(Wavetable.values());
         comboBox.setSelectedItem(Wavetable.Sine);
         comboBox.setBounds(100, 10, 80, 25);
@@ -23,21 +24,21 @@ public class LowFrequencyOsillator extends SynthControlContainer{
         comboBox.addItemListener(l ->
         {
             if (l.getStateChange() == ItemEvent.SELECTED) {
-                wavetable = (Wavetable)l.getItem();
+                lfo.wavetable = (Wavetable) l.getItem();
             }
             synthesizer.updateWaveViewer();
         });
         add(comboBox);
 
-        JLabel LFOLabel = new JLabel("LFO:");
+        JLabel LFOLabel = new JLabel("Vibrato:");
         LFOLabel.setBounds(10, 5, 100, 25);
         add(LFOLabel);
 
         JCheckBox checkBox = new JCheckBox("Enable Oscillator");
-        checkBox.setLocation(267,10);
-        checkBox.setSize(20,20);
+        checkBox.setLocation(267, 10);
+        checkBox.setSize(20, 20);
         JLabel checkBoxLabel = new JLabel("disabled");
-        checkBoxLabel.setLocation(220,10);
+        checkBoxLabel.setLocation(220, 10);
         checkBoxLabel.setSize(50, 20);
         checkBox.addItemListener(e -> {
             if (checkBox.isSelected()) {
@@ -59,9 +60,9 @@ public class LowFrequencyOsillator extends SynthControlContainer{
         JLabel frequencyParameter = new JLabel(" 0hz");
         frequencyParameter.setBounds(100, 65, 50, 25);
         frequencyParameter.setBorder(Utils.WindowDesign.LINE_BORDER);
-        Utils.ParameterHandling.addParametersMouseListeners(frequencyParameter, this, 0, 120, 1, frequency, () -> {
-            applyFrequency();
-            frequencyParameter.setText(" " + (int) getFrequency() + "hz");
+        Utils.ParameterHandling.addParametersMouseListeners(frequencyParameter, this, 0, 120, 1, lfo.frequency, () -> {
+            lfo.applyFrequency();
+            frequencyParameter.setText(" " + (int) lfo.getFrequency() + "hz");
         });
         add(frequencyParameter);
 
@@ -72,35 +73,26 @@ public class LowFrequencyOsillator extends SynthControlContainer{
         JLabel depthParameter = new JLabel(" 0%");
         depthParameter.setBounds(165, 65, 50, 25);
         depthParameter.setBorder(Utils.WindowDesign.LINE_BORDER);
-        Utils.ParameterHandling.addParametersMouseListeners(depthParameter, this, 0, 100, 1, depth, () -> {
-            depthParameter.setText(" " + (int) (getDepth() * 100) + "%");
+        Utils.ParameterHandling.addParametersMouseListeners(depthParameter, this, 0, 100, 1, lfo.depth, () -> {
+            depthParameter.setText(" " + (int) (lfo.getDepth() * 100) + "%");
         });
         add(depthParameter);
 
         setSize(300, 100);
-        setBounds(5, 420, 300, 100);
+        setBounds(310, 525, 310, 100);
         setBorder(Utils.WindowDesign.LINE_BORDER);
         setLayout(null);
     }
 
-    public double getFrequency() {
-        return frequency.val;
-    }
-    public double getDepth() {
-        return depth.val / 100.0;
-    }
-
-    public void applyFrequency() {
-        wavetableStepSize = (int)((Wavetable.SIZE * getFrequency() * 200)/ Synthesizer.AudioInfo.SAMPLE_RATE); // TODO: Why 1000 multiplied?
+    @Override
+    public double applyEffect(double currentFrequency) {
+        if (on) {
+            return currentFrequency * (1 + (lfoSample * lfo.getDepth()));
+        }
+        return currentFrequency;
     }
 
-    public double nextSample() {
-        double sample = wavetable.getSamples()[wavetableIndex];
-        wavetableIndex = (wavetableIndex + wavetableStepSize) % Wavetable.SIZE; // Same as in AudioThread.
-        return sample;
-    }
-
-    public void reset() {
-        wavetableIndex = 0;
+    public void update() {
+        lfoSample = lfo.nextSample();
     }
 }
